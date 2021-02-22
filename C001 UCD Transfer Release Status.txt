@@ -12,6 +12,7 @@ GO
 /**
  * @author: Emily Taylor (ejtaylor@ucdavis.edu) based off 
  * of official sunapsis task T022 'Transfer Release Status'
+ *
  * @disclaimer  This is a custom component made for UC Davis 
  * and is not official sunapsis code. Do not reach out to 
  * official sunapsis support for help with this custom component.

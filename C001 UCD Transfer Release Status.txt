@@ -1,0 +1,90 @@
+USE [InternationalServices]
+GO
+
+/****** Object:  StoredProcedure [dbo].[checklistTaskExtensionC001]    Script Date: 5/7/2020 10:48:06 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+/**
+ * @author: Emily Taylor (ejtaylor@ucdavis.edu) based off 
+ * of official sunapsis task T022 'Transfer Release Status'
+ * @disclaimer  This is a custom component made for UC Davis 
+ * and is not official sunapsis code. Do not reach out to 
+ * official sunapsis support for help with this custom component.
+ * This is not designed with client business practices in
+ * mind, and your mileage may vary.
+ *
+ * Description:	Set task to approved if the SEVIS release date is in the past. 
+ *	Set task to Conditionally Approved if SEVIS release scheduled.
+ *  Set task to denied if record in complete or terminated status.
+ * Note: UC Davis runs the data feed at 11pm and we subtract a day so it is 
+ *	current when advisors arrive the next day.
+*/
+
+CREATE PROCEDURE [dbo].[checklistTaskExtensionC001]
+AS
+BEGIN
+	
+	SET NOCOUNT ON;
+	
+	INSERT	INTO jbChecklistOfficeTaskExtQueue
+			(
+			 idnumber
+		   , checklistID
+		   , officeTaskID
+		   , status
+			)
+	SELECT	viewChecklistTaskExtHelper.idnumber
+		  , viewChecklistTaskExtHelper.checklistID
+		  , viewChecklistTaskExtHelper.officeTaskID
+		  , 'Approved' AS status
+	FROM	viewChecklistTaskExtHelper
+	INNER JOIN sevisTransferIn
+			ON viewChecklistTaskExtHelper.idnumber = sevisTransferIn.idnumber
+	WHERE	viewChecklistTaskExtHelper.taskType = 'C001'
+			AND sevisTransferIn.release <=  DATEADD(DAY, -1, dbo.fnTrunc(CURRENT_TIMESTAMP)) --Note
+			AND sevisTransferIn.release >= DATEADD(DAY, -60,  dbo.fnTrunc(CURRENT_TIMESTAMP))
+			AND sevisTransferIn.studentstatus in ('INITIAL', 'DRAFT')
+	UNION
+	SELECT	viewChecklistTaskExtHelper.idnumber
+		  , viewChecklistTaskExtHelper.checklistID
+		  , viewChecklistTaskExtHelper.officeTaskID
+		  , 'Conditionally Approved' AS status
+	FROM	viewChecklistTaskExtHelper
+			INNER JOIN dbo.jbChecklist
+					ON dbo.jbChecklist.idnumber = dbo.viewChecklistTaskExtHelper.idnumber
+					   AND dbo.jbChecklist.checklistID = dbo.viewChecklistTaskExtHelper.checklistID
+			INNER JOIN dbo.viewChecklistClient
+					ON dbo.jbChecklist.checklistID = dbo.viewChecklistClient.checklistID
+						AND dbo.viewChecklistClient.openChecklist = 1
+			INNER JOIN sevisTransferIn
+				ON viewChecklistTaskExtHelper.idnumber = sevisTransferIn.idnumber
+	WHERE	viewChecklistTaskExtHelper.taskType = 'C001'
+			AND sevisTransferIn.release >  DATEADD(DAY, -1, dbo.fnTrunc(CURRENT_TIMESTAMP)) --Note
+			AND sevisTransferIn.studentstatus in ('INITIAL', 'DRAFT')
+	UNION
+	SELECT	viewChecklistTaskExtHelper.idnumber
+		  , viewChecklistTaskExtHelper.checklistID
+		  , viewChecklistTaskExtHelper.officeTaskID
+		  , 'Denied' AS status
+	FROM	viewChecklistTaskExtHelper
+			INNER JOIN dbo.jbChecklist
+				ON dbo.jbChecklist.idnumber = dbo.viewChecklistTaskExtHelper.idnumber
+				   AND dbo.jbChecklist.checklistID = dbo.viewChecklistTaskExtHelper.checklistID
+			INNER JOIN dbo.viewChecklistClient
+				ON dbo.jbChecklist.checklistID = dbo.viewChecklistClient.checklistID
+					AND dbo.viewChecklistClient.openChecklist = 1
+			INNER JOIN sevisTransferIn
+				ON viewChecklistTaskExtHelper.idnumber = sevisTransferIn.idnumber
+	WHERE	viewChecklistTaskExtHelper.taskType = 'C001'
+			AND sevisTransferIn.studentstatus in ('COMPLETED', 'TERMINATED');
+
+END;
+GO
+
+GRANT EXECUTE ON dbo.checklistTaskExtensionC001 TO [InternationalServices-User];
+GO

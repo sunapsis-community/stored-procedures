@@ -10,8 +10,8 @@ Please note:
               GO
 3. All custom tasks must be added to codeChecklistOfficeTaskType to be configurable for use in checklists.
 4. Recommendation: Name the custom task with your institution identifier to clearly mark it as a custom task. For example: task C015 is your institution's 15th custom task.  It involves tagging a SEVIS transfer record and the description inserted into codeChecklistOfficeTaskType starts with your institution identifier "UCD Transfer Release Status"
-  Sample insert statement:  
-    INSERT INTO dbo.codeChecklistOfficeTaskType (
+  Sample insert statement  (commented out so the HTML doesn't interfere with how you see this):  
+    /**INSERT INTO dbo.codeChecklistOfficeTaskType (
 	   code
 	   , description
 	   ,groupDesc
@@ -19,4 +19,4 @@ Please note:
     )
     VALUES (
 	   N'C015', N'NAME of TASK HERE','','<h1>Function</h1><p>No automatic action. Same behavior if left blank.</p>'
-    );
+    );**/
